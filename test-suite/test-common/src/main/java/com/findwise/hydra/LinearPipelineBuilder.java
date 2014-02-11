@@ -9,7 +9,7 @@ import java.util.Map;
 
 import com.findwise.hydra.mongodb.MongoConnector;
 
-class LinearPipelineBuilder {
+public class LinearPipelineBuilder {
 	private boolean useOneStageGroupPerStage = true;
 	private List<Stage> stages = new ArrayList<Stage>();
 	private String stageGroupName;

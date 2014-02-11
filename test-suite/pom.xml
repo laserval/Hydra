@@ -11,7 +11,9 @@
 	</parent>
 
 	<modules>
+		<module>test-common</module>
 		<module>integration-test-stages</module>
 		<module>functional-tests</module>
+		<module>performance-test</module>
 	</modules>
 </project>

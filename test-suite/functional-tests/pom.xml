@@ -12,13 +12,7 @@
 	<dependencies>
 		<dependency>
 			<groupId>com.findwise.hydra</groupId>
-			<artifactId>hydra-core</artifactId>
-			<version>${parent.version}</version>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>com.findwise.hydra</groupId>
-			<artifactId>hydra-mongodb</artifactId>
+			<artifactId>test-common</artifactId>
 			<version>${parent.version}</version>
 			<scope>test</scope>
 		</dependency>
