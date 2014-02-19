@@ -237,7 +237,7 @@ public class StageRunner extends Thread {
 
 	private String getClassPath() {
 		if (classPathString == null) {
-			return getAllJars();
+			return "." + File.pathSeparator + getAllJars();
 		} else {
 			return classPathString + File.pathSeparator + getAllJars();
 		}
