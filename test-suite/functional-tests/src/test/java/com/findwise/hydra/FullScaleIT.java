@@ -56,6 +56,7 @@ public class FullScaleIT {
 
 	@Before
 	public void setUp() throws Exception {
+		logger.debug("Starting test with useOneStageGroupPerStage: '{}'", useOneStageGroupPerStage);
 		mongoConfiguration = new MongoConfiguration();
 		mongoConfiguration.setNamespace("hydra-test-FullScaleIT");
 		mongoConnector = new MongoConnector(mongoConfiguration);
@@ -76,6 +77,7 @@ public class FullScaleIT {
 	public void tearDown() throws Exception {
 		core.shutdown();
 		mongoConnector.getDB().dropDatabase();
+		logger.debug("Ended test with useOneStageGroupPerStage: '{}'", useOneStageGroupPerStage);
 	}
 
 	// A reasonable setting for this timeout is unfortunately very dependent on the
