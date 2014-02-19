@@ -75,6 +75,10 @@ public class FullScaleIT {
 
 	@After
 	public void tearDown() throws Exception {
+		Set<Stage> stages = mongoConnector.getPipelineReader().getPipeline().getStages();
+		for (Stage stage : stages) {
+			mongoConnector.getPipelineWriter().inactivate(stage);
+		}
 		core.shutdown();
 		mongoConnector.getDB().dropDatabase();
 		logger.debug("Ended test with useOneStageGroupPerStage: '{}'", useOneStageGroupPerStage);
