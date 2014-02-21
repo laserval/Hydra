@@ -77,7 +77,7 @@ public class ReleaseHandler<T extends DatabaseType> implements ResponsibleHandle
 
     @Override
     public String[] getSupportedUrls() {
-        return new String[]{RemotePipeline.RELEASE_DOCUMENT_URL};
+        return new String[] { RemotePipeline.RELEASE_DOCUMENT_URL };
     }
 
 }

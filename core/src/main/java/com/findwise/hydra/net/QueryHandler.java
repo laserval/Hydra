@@ -73,10 +73,10 @@ public class QueryHandler<T extends DatabaseType> implements ResponsibleHandler 
             HttpResponseWriter.printNoDocument(response);
         }
 
-        if (performanceLogging) {
+        if(performanceLogging) {
             long serialize = System.currentTimeMillis();
             Object id = d != null ? d.getID() : null;
-            logger.info(String.format("type=performance event=query stage_name=%s doc_id=\"%s\" start=%d end=%d total=%d entitystring=%d parse=%d query=%d serialize=%d", stage, id, start, serialize, serialize - start, tostring - start, parse - tostring, query - parse, serialize - query));
+            logger.info(String.format("type=performance event=query stage_name=%s doc_id=\"%s\" start=%d end=%d total=%d entitystring=%d parse=%d query=%d serialize=%d", stage, id, start, serialize, serialize-start, tostring-start, parse-tostring, query-parse, serialize-query));
         }
     }
 
@@ -94,13 +94,13 @@ public class QueryHandler<T extends DatabaseType> implements ResponsibleHandler 
 
     @Override
     public String[] getSupportedUrls() {
-        return new String[]{RemotePipeline.GET_DOCUMENT_URL};
+        return new String[] { RemotePipeline.GET_DOCUMENT_URL };
     }
 
     private void reportQuery(String stage) {
         StageManager sm = StageManager.getStageManager();
 
-        if (sm.hasRunnerForStage(stage)) {
+        if(sm.hasRunnerForStage(stage)) {
             sm.getRunnerForStage(stage).setHasQueried();
         }
     }

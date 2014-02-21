@@ -31,12 +31,12 @@ public class PropertiesHandler<T extends DatabaseType> implements ResponsibleHan
     @Override
     public void handle(HttpRequest request, HttpResponse response, HttpContext context)
             throws HttpException, IOException {
-        if (RESTTools.getBaseUrl(request).equals(RemotePipeline.GET_PROPERTIES_URL)) {
+        if(RESTTools.getBaseUrl(request).equals(RemotePipeline.GET_PROPERTIES_URL)) {
             getPropetries(request, response, context);
-        } else if (RESTTools.getBaseUrl(request).equals(GroupStarter.GET_STAGES_URL)) {
+        } else if(RESTTools.getBaseUrl(request).equals(GroupStarter.GET_STAGES_URL)) {
             getStages(request, response, context);
         } else {
-            logger.error("Unsupported request to PropertiesHandler. Request URL was: " + RESTTools.getUri(request));
+            logger.error("Unsupported request to PropertiesHandler. Request URL was: "+RESTTools.getUri(request));
         }
     }
 
@@ -46,10 +46,10 @@ public class PropertiesHandler<T extends DatabaseType> implements ResponsibleHan
         String group = RESTTools.getParam(request, GroupStarter.GROUP_PARAM);
 
         Pipeline p = reader.getPipeline();
-        if (!p.hasGroup(group)) {
+        if(!p.hasGroup(group)) {
             p = reader.getDebugPipeline();
         }
-        if (p.hasGroup(group)) {
+        if(p.hasGroup(group)) {
             HttpResponseWriter.printJson(response, p.getGroup(group).getStageNames());
             return;
         }
@@ -63,18 +63,19 @@ public class PropertiesHandler<T extends DatabaseType> implements ResponsibleHan
         logger.trace("handleGetProperties()");
 
         String stage = RESTTools.getStage(request);
-        logger.debug("Received getProperties()-request for stage: " + stage);
+        logger.debug("Received getProperties()-request for stage: "+stage);
 
-        if (stage == null) {
+        if(stage==null) {
             HttpResponseWriter.printMissingParameter(response, RemotePipeline.STAGE_PARAM);
             return;
         }
 
         Map<String, Object> map = new HashMap<String, Object>();
 
-        if (reader.getPipeline().hasStage(stage)) {
+        if(reader.getPipeline().hasStage(stage)) {
             map = reader.getPipeline().getStage(stage).getProperties();
-        } else if (reader.getDebugPipeline().hasStage(stage)) {
+        }
+        else if(reader.getDebugPipeline().hasStage(stage)){
             map = reader.getDebugPipeline().getStage(stage).getProperties();
         }
 
@@ -88,7 +89,7 @@ public class PropertiesHandler<T extends DatabaseType> implements ResponsibleHan
 
     @Override
     public String[] getSupportedUrls() {
-        return new String[]{RemotePipeline.GET_PROPERTIES_URL, GroupStarter.GET_STAGES_URL};
+        return new String[] {RemotePipeline.GET_PROPERTIES_URL, GroupStarter.GET_STAGES_URL};
     }
 
 }

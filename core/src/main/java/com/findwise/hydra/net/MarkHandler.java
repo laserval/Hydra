@@ -23,9 +23,7 @@ import com.findwise.hydra.local.RemotePipeline;
 public class MarkHandler<T extends DatabaseType> implements ResponsibleHandler {
     private enum Mark {
         PENDING, PROCESSED, DISCARDED, FAILED
-    }
-
-    ;
+    };
 
     private static Logger logger = LoggerFactory.getLogger(MarkHandler.class);
 
@@ -116,15 +114,15 @@ public class MarkHandler<T extends DatabaseType> implements ResponsibleHandler {
 
     @Override
     public boolean supports(HttpRequest request) {
-        return RESTTools.isPost(request) && getMark(request) != null;
+        return RESTTools.isPost(request) && getMark(request)!=null;
     }
 
     @Override
     public String[] getSupportedUrls() {
-        return new String[]{RemotePipeline.DISCARDED_DOCUMENT_URL,
+        return new String[] { RemotePipeline.DISCARDED_DOCUMENT_URL,
                 RemotePipeline.FAILED_DOCUMENT_URL,
                 RemotePipeline.PROCESSED_DOCUMENT_URL,
-                RemotePipeline.PENDING_DOCUMENT_URL};
+                RemotePipeline.PENDING_DOCUMENT_URL };
     }
 
 }

@@ -34,7 +34,7 @@ public class PingHandler implements ResponsibleHandler {
 
     @Override
     public String[] getSupportedUrls() {
-        return new String[]{pingUrl};
+        return new String[] { pingUrl };
     }
 
     public void setServerId(String serverId) {

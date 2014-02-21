@@ -62,12 +62,12 @@ public class HttpRESTHandler<T extends DatabaseType> implements
     }
 
     private void createHandlers() {
-        handlers = new ResponsibleHandler[]{new FileHandler<T>(documentIO),
+        handlers = new ResponsibleHandler[] { new FileHandler<T>(documentIO),
                 new PropertiesHandler<T>(pipelineReader),
                 new MarkHandler<T>(documentIO, performanceLogging),
                 new QueryHandler<T>(documentIO, performanceLogging),
                 new ReleaseHandler<T>(documentIO),
-                new WriteHandler<T>(documentIO, performanceLogging)};
+                new WriteHandler<T>(documentIO, performanceLogging) };
     }
 
     private ResponsibleHandler[] getHandlers() {
@@ -128,10 +128,10 @@ public class HttpRESTHandler<T extends DatabaseType> implements
                     .getAttribute(ExecutionContext.HTTP_CONNECTION);
             InetAddress ia = connection.getRemoteAddress();
 
-            if (resolvedHosts.contains(ia)) {
+            if(resolvedHosts.contains(ia)) {
                 return true;
             } else {
-                logger.error("Caller adress (" + ia + ") not in the list of allowed hosts (" + allowedHosts + "). Refusing the connection.");
+                logger.error("Caller adress ("+ia+") not in the list of allowed hosts ("+allowedHosts+"). Refusing the connection.");
                 return false;
             }
         } catch (Exception e) {
@@ -175,15 +175,15 @@ public class HttpRESTHandler<T extends DatabaseType> implements
     }
 
     private void resolveAllowedHosts() {
-        if (allowedHosts == null) {
+        if( allowedHosts == null) {
             resolvedHosts = null;
         } else {
             resolvedHosts = new ArrayList<InetAddress>();
-            for (String allowedHost : allowedHosts) {
+            for(String allowedHost: allowedHosts) {
                 try {
                     resolvedHosts.add(InetAddress.getByName(allowedHost));
                 } catch (UnknownHostException e) {
-                    /* Fail early if configuration is wrong */
+					/* Fail early if configuration is wrong */
                     throw new RuntimeException("Could not resolve host: " + allowedHost, e);
                 }
             }

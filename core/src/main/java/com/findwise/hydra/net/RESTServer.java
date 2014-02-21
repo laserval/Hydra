@@ -138,7 +138,7 @@ public class RESTServer extends Thread {
                     .setBooleanParameter(CoreConnectionPNames.TCP_NODELAY, true)
                     .setParameter(CoreProtocolPNames.ORIGIN_SERVER, "Hydra Core (Apache HttpComponents 4.2.1/1.1)");
 
-            HttpProcessor httpproc = new ImmutableHttpProcessor(new HttpResponseInterceptor[]{
+            HttpProcessor httpproc = new ImmutableHttpProcessor(new HttpResponseInterceptor[] {
                     new ResponseDate(),
                     new ResponseServer(),
                     new ResponseContent(),
@@ -172,13 +172,15 @@ public class RESTServer extends Thread {
             ioReactor.listen(new InetSocketAddress(port));
             executing = true;
             ioReactor.execute(ioEventDispatch);
-            if (!shutdownCalled) {
+            if(!shutdownCalled) {
                 logger.error("Exiting ioReactor exec loop");
-            } else {
+            }
+            else {
                 logger.debug("Exiting ioReactor exec loop");
             }
             executing = false;
-        } catch (IOException e) {
+        }
+        catch (IOException e) {
             logger.error("I/O error in RESTServer: " + e.getMessage());
             error = e;
         }
@@ -193,8 +195,8 @@ public class RESTServer extends Thread {
     public static RESTServer getNewStartedRESTServer(int port, HttpRESTHandler<?> restHandler) {
         RESTServer rest = new RESTServer(port, restHandler);
 
-        if (!rest.blockingStart()) {
-            return getNewStartedRESTServer((int) (Math.random() * 64000) + 1024, restHandler);
+        if(!rest.blockingStart()) {
+            return getNewStartedRESTServer((int)(Math.random()*64000)+1024, restHandler);
         }
 
         return rest;

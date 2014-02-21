@@ -43,10 +43,10 @@ public class FileHandler<T extends DatabaseType> implements ResponsibleHandler {
     @Override
     public void handle(HttpRequest request, HttpResponse response, HttpContext context)
             throws HttpException, IOException {
-        if (RESTTools.isPost(request)) {
+        if(RESTTools.isPost(request)) {
             handleSaveFile(request, response);
         } else if (RESTTools.isGet(request)) {
-            if (RESTTools.getParam(request, RemotePipeline.FILENAME_PARAM) != null) {
+            if(RESTTools.getParam(request, RemotePipeline.FILENAME_PARAM)!=null) {
                 handleGetFile(request, response);
             } else {
                 handleGetFilenames(request, response);
@@ -63,7 +63,7 @@ public class FileHandler<T extends DatabaseType> implements ResponsibleHandler {
 
     @Override
     public String[] getSupportedUrls() {
-        return new String[]{RemotePipeline.FILE_URL};
+        return new String[] { RemotePipeline.FILE_URL };
     }
 
     private void handleSaveFile(HttpRequest request, HttpResponse response) {
@@ -91,19 +91,19 @@ public class FileHandler<T extends DatabaseType> implements ResponsibleHandler {
 
     private void handleGetFile(HttpRequest request, HttpResponse response) throws IOException {
         Triple triple = getTriple(request, response);
-        if (triple == null) {
+        if(triple==null) {
             return;
         }
 
         DatabaseDocument<T> md = io.getDocumentById(triple.docid);
-        if (md == null) {
+        if(md==null) {
             HttpResponseWriter.printNoDocument(response);
             return;
         }
 
         DocumentFile<T> df = io.getDocumentFile(md, triple.fileName);
 
-        if (df == null) {
+        if(df==null) {
             HttpResponseWriter.printFileNotFound(response, triple.fileName);
             return;
         }
@@ -114,12 +114,12 @@ public class FileHandler<T extends DatabaseType> implements ResponsibleHandler {
     private void handleGetFilenames(HttpRequest request, HttpResponse response) throws IOException {
         Tuple tuple = getTuple(request, response);
 
-        if (tuple == null) {
+        if(tuple == null) {
             return;
         }
 
         DatabaseDocument<T> md = io.getDocumentById(tuple.docid);
-        if (md == null) {
+        if(md==null) {
             HttpResponseWriter.printNoDocument(response);
             return;
         }
@@ -134,7 +134,7 @@ public class FileHandler<T extends DatabaseType> implements ResponsibleHandler {
 
         Object o = SerializationUtils.fromJson(requestContent);
 
-        if (!(o instanceof Map)) {
+        if(!(o instanceof Map)) {
             return null;
         }
 
@@ -147,10 +147,10 @@ public class FileHandler<T extends DatabaseType> implements ResponsibleHandler {
         String savedByStage = (String) map.get("savedByStage");
 
         InputStream is;
-        if (encoding == null) {
-            is = new ByteArrayInputStream(Base64.decodeBase64(((String) map.get("stream")).getBytes("UTF-8")));
+        if(encoding == null) {
+            is = new ByteArrayInputStream(Base64.decodeBase64(((String)map.get("stream")).getBytes("UTF-8")));
         } else {
-            is = new ByteArrayInputStream(Base64.decodeBase64(((String) map.get("stream")).getBytes(encoding)));
+            is = new ByteArrayInputStream(Base64.decodeBase64(((String)map.get("stream")).getBytes(encoding)));
         }
 
         DocumentFile<T> df = new DocumentFile<T>(id, fileName, is, savedByStage, d);
@@ -163,17 +163,17 @@ public class FileHandler<T extends DatabaseType> implements ResponsibleHandler {
     private void handleDeleteFile(HttpRequest request, HttpResponse response) throws IOException {
         Triple triple = getTriple(request, response);
 
-        if (triple == null) {
+        if(triple == null) {
             return;
         }
 
         DatabaseDocument<T> md = io.getDocumentById(triple.docid);
-        if (md == null) {
+        if(md==null) {
             HttpResponseWriter.printNoDocument(response);
             return;
         }
 
-        if (io.deleteDocumentFile(md, triple.fileName)) {
+        if(io.deleteDocumentFile(md, triple.fileName)) {
             HttpResponseWriter.printFileDeleteOk(response, triple.fileName, md.getID());
             return;
         }
@@ -183,13 +183,13 @@ public class FileHandler<T extends DatabaseType> implements ResponsibleHandler {
     private Tuple getTuple(HttpRequest request, HttpResponse response) {
         Tuple tuple = new Tuple();
         tuple.stage = RESTTools.getParam(request, RemotePipeline.STAGE_PARAM);
-        if (tuple.stage == null) {
+        if(tuple.stage==null) {
             HttpResponseWriter.printMissingParameter(response, RemotePipeline.STAGE_PARAM);
             return null;
         }
 
         String rawparam = RESTTools.getParam(request, RemotePipeline.DOCID_PARAM);
-        if (rawparam == null) {
+        if(rawparam==null) {
             HttpResponseWriter.printMissingParameter(response, RemotePipeline.DOCID_PARAM);
             return null;
         }
@@ -198,8 +198,8 @@ public class FileHandler<T extends DatabaseType> implements ResponsibleHandler {
         } catch (UnsupportedEncodingException e) {
 
         }
-        if (tuple.docid == null) {
-            HttpResponseWriter.printUnhandledException(response, new SerializationException("Unable to deserialize the parameter " + RemotePipeline.DOCID_PARAM));
+        if(tuple.docid==null) {
+            HttpResponseWriter.printUnhandledException(response, new SerializationException("Unable to deserialize the parameter "+RemotePipeline.DOCID_PARAM));
             return null;
         }
 
@@ -210,7 +210,7 @@ public class FileHandler<T extends DatabaseType> implements ResponsibleHandler {
         Triple triple = new Triple();
 
         Tuple tuple = getTuple(request, response);
-        if (tuple == null) {
+        if(tuple==null) {
             return null;
         }
 
@@ -218,7 +218,7 @@ public class FileHandler<T extends DatabaseType> implements ResponsibleHandler {
         triple.stage = tuple.stage;
 
         triple.fileName = RESTTools.getParam(request, RemotePipeline.FILENAME_PARAM);
-        if (triple.fileName == null) {
+        if(triple.fileName==null) {
             HttpResponseWriter.printMissingParameter(response, RemotePipeline.FILENAME_PARAM);
             return null;
         }
@@ -232,7 +232,6 @@ public class FileHandler<T extends DatabaseType> implements ResponsibleHandler {
     }
 
     private class Triple {
-        @SuppressWarnings("unused")
         String stage;
         DocumentID<T> docid;
         String fileName;

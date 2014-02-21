@@ -19,8 +19,7 @@ import com.findwise.hydra.SerializationUtils;
 public final class HttpResponseWriter {
     private static Logger logger = LoggerFactory.getLogger(HttpResponseWriter.class);
 
-    private HttpResponseWriter() {
-    } // Should not be possible to instantiate
+    private HttpResponseWriter() {} // Should not be possible to instantiate
 
     public static final ContentType CONTENT_TYPE = ContentType.create("application/json", "UTF-8");
 
@@ -47,9 +46,9 @@ public final class HttpResponseWriter {
     }
 
     protected static void printUpdateFailed(HttpResponse response, Object id) {
-        logger.debug("Printing updateFailed for id:" + id);
+        logger.debug("Printing updateFailed for id:"+id);
         response.setStatusCode(HttpStatus.SC_NOT_FOUND);
-        setStringEntity(response, "Update of your document failed. Sent ID { _id : '" + id + "' } probably doesn't exist.");
+        setStringEntity(response, "Update of your document failed. Sent ID { _id : '"+id+"' } probably doesn't exist.");
     }
 
     protected static void printDeadNode(HttpResponse response) {
@@ -100,11 +99,11 @@ public final class HttpResponseWriter {
 
     protected static void printSaveFailed(HttpResponse response, Object id) {
         response.setStatusCode(HttpStatus.SC_INTERNAL_SERVER_ERROR);
-        setStringEntity(response, "Unable to update document with id:" + id);
+        setStringEntity(response, "Unable to update document with id:"+id);
     }
 
     protected static void printFileDeleteOk(HttpResponse response, String filename, Object id) {
-        logger.debug("Successfully deleted file with filename: " + filename + " from document " + id);
+        logger.debug("Successfully deleted file with filename: "+filename+" from document " + id);
         response.setStatusCode(HttpStatus.SC_OK);
         setStringEntity(response, "File " + id + " successfully deleted");
     }
@@ -160,6 +159,6 @@ public final class HttpResponseWriter {
     protected static void printFileNotFound(HttpResponse response, String fileName) {
         logger.debug("Printing no file found");
         response.setStatusCode(HttpStatus.SC_NOT_FOUND);
-        setStringEntity(response, "No file found by the name " + fileName + " for this document");
+        setStringEntity(response, "No file found by the name "+fileName+" for this document");
     }
 }

@@ -45,19 +45,19 @@ public class WriteHandler<T extends DatabaseType> implements ResponsibleHandler 
         long tostring = System.currentTimeMillis();
 
         String stage = RESTTools.getParam(request, RemotePipeline.STAGE_PARAM);
-        if (stage == null) {
+        if(stage==null) {
             HttpResponseWriter.printMissingParameter(response, RemotePipeline.STAGE_PARAM);
             return;
         }
 
         String partial = RESTTools.getParam(request, RemotePipeline.PARTIAL_PARAM);
-        if (partial == null) {
+        if(partial==null) {
             HttpResponseWriter.printMissingParameter(response, RemotePipeline.PARTIAL_PARAM);
             return;
         }
 
         String norelease = RESTTools.getParam(request, RemotePipeline.NORELEASE_PARAM);
-        if (norelease == null) {
+        if(norelease==null) {
             HttpResponseWriter.printMissingParameter(response, RemotePipeline.NORELEASE_PARAM);
             return;
         }
@@ -65,11 +65,12 @@ public class WriteHandler<T extends DatabaseType> implements ResponsibleHandler 
         DatabaseDocument<T> md;
         try {
             md = io.convert(new LocalDocument(requestContent));
-        } catch (JsonException e) {
+        }
+        catch(JsonException e) {
             HttpResponseWriter.printJsonException(response, e);
             return;
         } catch (ConversionException e) {
-            logger.error("Caught Exception when trying to convert " + requestContent, e);
+            logger.error("Caught Exception when trying to convert "+requestContent, e);
             HttpResponseWriter.printBadRequestContent(response);
             return;
         }
@@ -78,16 +79,18 @@ public class WriteHandler<T extends DatabaseType> implements ResponsibleHandler 
 
         String type;
         boolean saveRes;
-        if (partial.equals("1")) {
+        if(partial.equals("1")) {
             saveRes = handlePartialWrite(md, response);
-            type = "update";
-        } else {
-            if (md.getID() != null) {
+            type="update";
+        }
+        else {
+            if(md.getID()!=null) {
                 saveRes = handleFullUpdate(md, response);
-            } else {
+            }
+            else {
                 saveRes = handleInsert(md, response);
             }
-            type = "insert";
+            type="insert";
         }
         long write = System.currentTimeMillis();
 
@@ -98,9 +101,9 @@ public class WriteHandler<T extends DatabaseType> implements ResponsibleHandler 
                 return;
             }
         }
-        if (performanceLogging) {
+        if(performanceLogging) {
             long end = System.currentTimeMillis();
-            logger.info(String.format("type=performance event=%s stage_name=%s doc_id=\"%s\" start=%d end=%d total=%d entitystring=%d parse=%d query=%d serialize=%d", type, stage, md.getID(), start, end, end - start, tostring - start, convert - tostring, write - convert, end - write));
+            logger.info(String.format("type=performance event=%s stage_name=%s doc_id=\"%s\" start=%d end=%d total=%d entitystring=%d parse=%d query=%d serialize=%d", type, stage, md.getID(), start, end, end-start, tostring-start, convert-tostring, write-convert, end-write));
         }
     }
 
@@ -108,25 +111,26 @@ public class WriteHandler<T extends DatabaseType> implements ResponsibleHandler 
         return io.markTouched(md.getID(), stage);
     }
 
-    private boolean handlePartialWrite(DatabaseDocument<T> md, HttpResponse response) throws UnsupportedEncodingException {
+    private boolean handlePartialWrite(DatabaseDocument<T> md, HttpResponse response) throws UnsupportedEncodingException{
         logger.trace("handlePartialWrite()");
-        if (md.getID() == null) {
+        if(md.getID()==null) {
             HttpResponseWriter.printMissingID(response);
             return false;
         }
-        logger.debug("Handling a partial write for document " + md.getID());
+        logger.debug("Handling a partial write for document "+md.getID());
         DatabaseDocument<T> inDB = io.getDocumentById(md.getID());
-        if (inDB == null) {
+        if(inDB==null) {
             HttpResponseWriter.printNoDocument(response);
             return false;
         }
         inDB.putAll(md);
 
 
-        if (io.update(inDB)) {
+        if(io.update(inDB)){
             HttpResponseWriter.printSaveOk(response, md.getID());
             return true;
-        } else {
+        }
+        else {
             HttpResponseWriter.printSaveFailed(response, md.getID());
             return false;
         }
@@ -134,7 +138,7 @@ public class WriteHandler<T extends DatabaseType> implements ResponsibleHandler 
 
     private boolean handleFullUpdate(DatabaseDocument<T> md, HttpResponse response) {
         logger.trace("handleFullUpdate()");
-        if (io.update(md)) {
+        if(io.update(md)) {
             HttpResponseWriter.printSaveOk(response, md.getID());
             return true;
         }
@@ -143,15 +147,15 @@ public class WriteHandler<T extends DatabaseType> implements ResponsibleHandler 
     }
 
     private boolean handleInsert(DatabaseDocument<T> md, HttpResponse response) {
-        if (io.insert(md)) {
+        if(io.insert(md)) {
             HttpResponseWriter.printInsertOk(response, md);
             return true;
-        } else {
+        }
+        else {
             HttpResponseWriter.printInsertFailed(response);
             return false;
         }
     }
-
     @Override
     public boolean supports(HttpRequest request) {
         return RESTTools.getMethod(request) == Method.POST
@@ -161,7 +165,7 @@ public class WriteHandler<T extends DatabaseType> implements ResponsibleHandler 
 
     @Override
     public String[] getSupportedUrls() {
-        return new String[]{RemotePipeline.WRITE_DOCUMENT_URL};
+        return new String[] { RemotePipeline.WRITE_DOCUMENT_URL };
     }
 
 }
