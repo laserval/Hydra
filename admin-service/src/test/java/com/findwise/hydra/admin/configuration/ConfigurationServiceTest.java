@@ -1,18 +1,14 @@
-package com.findwise.hydra.admin;
+package com.findwise.hydra.admin.configuration;
 
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertEquals;
 
-import java.io.IOException;
-import java.util.Date;
 import java.util.Map;
 
 import com.findwise.hydra.*;
-import com.findwise.hydra.admin.rest.StageClassNotFoundException;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;

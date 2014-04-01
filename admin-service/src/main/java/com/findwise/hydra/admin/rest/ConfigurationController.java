@@ -18,12 +18,11 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.findwise.hydra.Stage;
 import com.findwise.hydra.StageGroup;
-import com.findwise.hydra.admin.ConfigurationService;
+import com.findwise.hydra.admin.configuration.ConfigurationService;
 import com.findwise.hydra.admin.documents.DocumentsService;
 
 import com.findwise.hydra.admin.stages.StagesService;

@@ -1,4 +1,4 @@
-package com.findwise.hydra.admin;
+package com.findwise.hydra.admin.configuration;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -10,6 +10,8 @@ import java.util.Map;
 import com.findwise.hydra.DatabaseException;
 import com.findwise.hydra.PipelineStatus;
 import com.findwise.hydra.Stage;
+import com.findwise.hydra.admin.PipelineScanner;
+import com.findwise.hydra.admin.StageInformation;
 import com.findwise.hydra.admin.rest.StageClassNotFoundException;
 import com.findwise.hydra.stage.AbstractProcessStageMapper;
 import org.slf4j.Logger;

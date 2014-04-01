@@ -13,7 +13,7 @@ import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.web.multipart.commons.CommonsMultipartResolver;
 
-import com.findwise.hydra.admin.ConfigurationService;
+import com.findwise.hydra.admin.configuration.ConfigurationService;
 import com.findwise.hydra.admin.documents.DocumentsService;
 import com.findwise.hydra.admin.stages.StagesService;
 import com.findwise.hydra.mongodb.MongoConnector;
