@@ -21,6 +21,7 @@ import static org.mockito.Mockito.when;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
@@ -30,6 +31,7 @@ import org.junit.runner.RunWith;
 import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.mockito.internal.util.collections.Sets;
 import org.mockito.runners.MockitoJUnitRunner;
 
 import com.findwise.hydra.local.LocalDocument;
@@ -564,7 +566,27 @@ public class CachingDocumentNIOTest {
 		verify(doc2).removeFetchedBy(CachingDocumentNIO.CACHE_TAG);
 		verify(writer).update(doc2);
 	}
-	
+
+	@Test
+	public void testCacheFlush_fails_fetched_not_touched() {
+		when(doc1.getFetchedBy()).thenReturn(Sets.newSet("stage1"));
+		when(doc1.getTouchedBy()).thenReturn(Sets.newSet("stage1"));
+		when(doc2.getFetchedBy()).thenReturn(Sets.newSet("stage1"));
+		when(doc2.getTouchedBy()).thenReturn(Collections.EMPTY_SET);
+		List list = Arrays.asList(new DatabaseDocument[] { doc1, doc2 });
+		when(cache.removeAll()).thenReturn(list);
+
+		io.flush();
+
+		InOrder inOrder = inOrder(cache, writer, doc1);
+		inOrder.verify(cache).removeAll();
+		inOrder.verify(doc1).removeFetchedBy(CachingDocumentNIO.CACHE_TAG);
+		inOrder.verify(writer).update(doc1);
+		verify(doc2).removeFetchedBy(CachingDocumentNIO.CACHE_TAG);
+		verify(writer, never()).update(doc2);
+		verify(writer).markFailed(doc2, "stage1");
+	}
+
 	@Test
 	public void testCacheFlushTimeout() throws Exception {
 		List list = Arrays.asList(new DatabaseDocument[] { doc1, doc2 });
@@ -579,6 +601,24 @@ public class CachingDocumentNIOTest {
 		verify(doc2).removeFetchedBy(CachingDocumentNIO.CACHE_TAG);
 		verify(writer).update(doc2);
 	}
-	
-	
+
+	@Test
+	public void testCacheFlushTimeout_fails_fetched_not_touched() {
+		when(doc1.getFetchedBy()).thenReturn(Sets.newSet("stage1"));
+		when(doc1.getTouchedBy()).thenReturn(Sets.newSet("stage1"));
+		when(doc2.getFetchedBy()).thenReturn(Sets.newSet("stage1"));
+		when(doc2.getTouchedBy()).thenReturn(Collections.EMPTY_SET);
+		List list = Arrays.asList(new DatabaseDocument[] { doc1, doc2 });
+		when(cache.removeStale(anyInt())).thenReturn(list);
+
+		io.flush(1000);
+
+		InOrder inOrder = inOrder(cache, writer, doc1);
+		inOrder.verify(cache).removeStale(1000);
+		inOrder.verify(doc1).removeFetchedBy(CachingDocumentNIO.CACHE_TAG);
+		inOrder.verify(writer).update(doc1);
+		verify(doc2).removeFetchedBy(CachingDocumentNIO.CACHE_TAG);
+		verify(writer, never()).update(doc2);
+		verify(writer).markFailed(doc2, "stage1");
+	}
 }

@@ -6,7 +6,9 @@ import java.util.Collection;
 import java.util.ConcurrentModificationException;
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
 
+import com.google.common.collect.Sets;
 import org.slf4j.LoggerFactory;
 
 import com.findwise.hydra.DatabaseConnector.ConversionException;
@@ -358,10 +360,7 @@ public class CachingDocumentNIO<T extends DatabaseType> implements
 	 */
 	public void flush() {
 		Collection<DatabaseDocument<T>> docs = cache.removeAll();
-		for (DatabaseDocument<T> d : docs) {
-			d.removeFetchedBy(CACHE_TAG);
-			writer.update(d);
-		}
+		flush(docs);
 	}
 
 	/**
@@ -374,9 +373,22 @@ public class CachingDocumentNIO<T extends DatabaseType> implements
 			logger.debug("Flushing " + docs.size() + " out of "
 					+ (docs.size() + cache.getSize()) + " documents from cache");
 		}
+		flush(docs);
+	}
+
+	private void flush(Collection<DatabaseDocument<T>> docs) {
 		for (DatabaseDocument<T> d : docs) {
 			d.removeFetchedBy(CACHE_TAG);
-			writer.update(d);
+			Set<String> fetched = d.getFetchedBy();
+			Set<String> touched = d.getTouchedBy();
+			Set<String> failed = Sets.difference(fetched, touched);
+			if (!failed.isEmpty()) {
+				for (String stage : failed) {
+					writer.markFailed(d, stage);
+				}
+			} else {
+				writer.update(d);
+			}
 		}
 	}
 
