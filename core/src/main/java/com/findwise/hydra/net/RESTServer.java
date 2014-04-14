@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.UUID;
 
+import com.findwise.hydra.PipelineServer;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpResponseInterceptor;
 import org.apache.http.HttpStatus;
@@ -40,7 +41,7 @@ import com.findwise.tools.HttpConnection;
  *
  * @author joel.westberg
  */
-public class RESTServer extends Thread {
+public class RESTServer extends Thread implements PipelineServer {
     private int port;
     private static Logger logger = LoggerFactory.getLogger(RESTServer.class);
 
@@ -187,7 +188,8 @@ public class RESTServer extends Thread {
         }
     }
 
-    public void shutdown() throws IOException {
+    @Override
+	public void shutdown() throws IOException {
         logger.info("Caught shutdown command to RESTServer");
         shutdownCalled = true;
         ioReactor.shutdown();

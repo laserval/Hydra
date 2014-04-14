@@ -27,7 +27,7 @@ public final class Main implements ShutdownHandler {
 
 	private static Logger logger = LoggerFactory.getLogger(Main.class);
 	private SimpleSocketServer simpleSocketServer = null;
-	private RESTServer server = null;
+	private PipelineServer server = null;
 
 	private volatile boolean shuttingDown = false;
 	
