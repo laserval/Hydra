@@ -555,6 +555,13 @@ public class MongoDocumentIO implements DocumentReader<MongoType>, DocumentWrite
 						+ document.getID() + " to " + oldDocuments.getName() + ": "
 						+ e.getMessage(),
 						e);
+			} catch (MongoException e) {
+				document.addError(stage, e);
+				mongoDocument.putAll(((MongoDocument) document).toMap());
+				logger.error("An error occurred while writing document "
+						+ document.getID() + " to " + oldDocuments.getName() + ": "
+						+ e.getMessage(),
+						e);
 			}
 		}
 
