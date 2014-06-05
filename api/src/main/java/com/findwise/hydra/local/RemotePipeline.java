@@ -10,9 +10,13 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
+import com.findwise.hydra.Document.Status;
+import com.findwise.hydra.Document.Status.*;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
+import org.apache.http.NoHttpResponseException;
+import org.apache.http.conn.HttpHostConnectException;
 import org.apache.http.util.EntityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -105,7 +109,15 @@ public class RemotePipeline implements DocumentFileRepository {
 	public LocalDocument getDocument(LocalQuery query) throws IOException {
 		HttpResponse response;
 		long start = System.currentTimeMillis();
-		response = core.post(getUrl, query.toJson());
+		try {
+			response = core.post(getUrl, query.toJson());
+		} catch (NoHttpResponseException e) {
+			logger.error("No response from core", e);
+			return null;
+		} catch (HttpHostConnectException e) {
+			logger.error("Could not connect to core", e);
+			return null;
+		}
 
 		long startSerialize = System.currentTimeMillis();
 		long startJson = 0L;
@@ -199,29 +211,7 @@ public class RemotePipeline implements DocumentFileRepository {
 	}
 
 	public boolean markPending(LocalDocument d) throws IOException {
-		HttpResponse response = core.post(pendingUrl, d.contentFieldsToJson(null));
-		if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
-			EntityUtils.consume(response.getEntity());
-
-			return true;
-		}
-
-		logUnexpected(response);
-
-		return false;
-	}
-
-	public boolean markFailed(LocalDocument d) throws IOException {
-		HttpResponse response = core.post(failedUrl, d.modifiedFieldsToJson());
-		if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
-			EntityUtils.consume(response.getEntity());
-
-			return true;
-		}
-
-		logUnexpected(response);
-
-		return false;
+		return mark(d.contentFieldsToJson(null), Status.PENDING);
 	}
 
 	public boolean markFailed(LocalDocument d, Throwable t) throws IOException {
@@ -229,30 +219,53 @@ public class RemotePipeline implements DocumentFileRepository {
 		return markFailed(d);
 	}
 
+	public boolean markFailed(LocalDocument d) throws IOException {
+		return mark(d.modifiedFieldsToJson(), Status.FAILED);
+	}
+
 	public boolean markProcessed(LocalDocument d) throws IOException {
-		HttpResponse response = core.post(processedUrl, d.modifiedFieldsToJson());
-		if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
-			EntityUtils.consume(response.getEntity());
-
-			return true;
-		}
-
-		logUnexpected(response);
-
-		return false;
+		return mark(d.modifiedFieldsToJson(), Status.PROCESSED);
 	}
 
 	public boolean markDiscarded(LocalDocument d) throws IOException {
-		HttpResponse response = core.post(discardedUrl, d.modifiedFieldsToJson());
-		if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
-			EntityUtils.consume(response.getEntity());
+		return mark(d.modifiedFieldsToJson(), Status.DISCARDED);
+	}
 
-			return true;
+	private boolean mark(String fieldsAsJson, Status status) throws IOException {
+		String url;
+		switch (status) {
+			case DISCARDED:
+				url = discardedUrl;
+				break;
+			case FAILED:
+				url = failedUrl;
+				break;
+			case PENDING:
+				url = pendingUrl;
+				break;
+			case PROCESSED:
+				url = processedUrl;
+				break;
+			default:
+				logger.warn("No endpoint available for status '{}'", status);
+				return false;
 		}
-
-		logUnexpected(response);
-
-		return false;
+		try {
+			HttpResponse response = core.post(url, fieldsAsJson);
+			if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
+				EntityUtils.consume(response.getEntity());
+				return true;
+			} else {
+				logUnexpected(response);
+				return false;
+			}
+		} catch (NoHttpResponseException e) {
+			logger.error("No response from core", e);
+			return false;
+		} catch (HttpHostConnectException e) {
+			logger.error("Could not connect to core", e);
+			return false;
+		}
 	}
 
 	private String getWriteUrl(boolean partialUpdate) {
