@@ -413,6 +413,7 @@ public class CachingDocumentNIO<T extends DatabaseType> implements
 					shutdown();
 				}
 			});
+			setName(this.getClass().getSimpleName());
 		}
 
 		public void run() {

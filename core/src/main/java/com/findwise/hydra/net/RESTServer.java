@@ -66,6 +66,7 @@ public class RESTServer extends Thread {
 		this.port = port;
 		executing = false;
 		setDaemon(true);
+		setName(String.format("%s-%d", this.getClass().getSimpleName(), port));
 	}
 	
 	@SuppressWarnings("rawtypes")

@@ -23,6 +23,7 @@ public class StatusUpdater extends Thread {
 		this.connector = connector;
 		this.interval = updateIntervalMs;
 		setDaemon(true);
+		setName(String.format("%s-%s", this.getClass().getSimpleName(), connector.getClass().getSimpleName()));
 	}
 	
 	public void setUpdateInterval(int updateIntervalMs) {

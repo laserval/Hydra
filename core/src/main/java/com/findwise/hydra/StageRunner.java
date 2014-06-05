@@ -69,6 +69,7 @@ public class StageRunner extends Thread {
 		this.loggingPort = loggingPort;
 		this.shutdownHandler = shutdownHandler;
 		timesStarted = 0;
+		setName(String.format("%s-%s", this.getClass().getSimpleName(), stageGroup.getName()));
 	}
 
 	/**

@@ -24,7 +24,8 @@ public class StreamLogger extends Thread {
         this.stageName = stageName;
         this.streamReader = new BufferedReader(new InputStreamReader(inputStream));
         setDaemon(true);
-	}
+        setName(String.format("%s-%s", this.getClass().getSimpleName(), this.stageName));
+    }
 
     public void run() {
         while(true) {
