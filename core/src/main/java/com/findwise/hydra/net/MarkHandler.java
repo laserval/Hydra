@@ -49,9 +49,10 @@ public class MarkHandler<T extends DatabaseType> implements ResponsibleHandler {
 			return;
 		}
 
-		DatabaseDocument<T> md;
+		DatabaseDocument<T> databaseDocument;
 		try {
-			md = io.convert(new LocalDocument(requestContent));
+			logger.debug("Received document '{}'", requestContent);
+			databaseDocument = io.convert(new LocalDocument(requestContent));
 		} catch (JsonException e) {
 			HttpResponseWriter.printJsonException(response, e);
 			return;
@@ -61,24 +62,19 @@ public class MarkHandler<T extends DatabaseType> implements ResponsibleHandler {
 			return;
 		}
 		long convert = System.currentTimeMillis();
-		
-		DatabaseDocument<T> dbdoc = io.getDocumentById(md.getID());
-		long query = System.currentTimeMillis();
-		if(dbdoc==null) {
-			HttpResponseWriter.printNoDocument(response);
-			return;
-		}
-		
-		dbdoc.putAll(md);
-
-		if (!mark(dbdoc, stage, getMark(request))) {
-			HttpResponseWriter.printNoDocument(response);
+		Mark requestedMark = getMark(request);
+		logger.debug("Stage '{}' requested Mark '{}' for document with id '{}'", stage, requestedMark, databaseDocument.getID());
+		boolean markWasSuccessful = mark(databaseDocument, stage, requestedMark);
+		long mark = System.currentTimeMillis();
+		if (markWasSuccessful) {
+			HttpResponseWriter.printSaveOk(response, databaseDocument.getID());
 		} else {
-			HttpResponseWriter.printSaveOk(response, md.getID());
+			HttpResponseWriter.printNoDocument(response); // Failure does not always mean the document is missing
 		}
-		if(performanceLogging) {
+		if (performanceLogging) {
 			long end = System.currentTimeMillis();
-			logger.info(String.format("type=performance event=processed stage_name=%s doc_id=%s start=%d end=%d total=%d entitystring=%d parse=%d query=%d serialize=%d", stage, md.getID(), start, end, end-start, tostring-start, convert-tostring, query-convert, end-query));
+			logger.info(String.format("type=performance event=processed stage_name=%s doc_id=%s start=%d end=%d total=%d entitystring=%d parse=%d mark=%d serialize=%d",
+					stage, databaseDocument.getID(), start, end, end-start, tostring-start, convert-tostring, mark-convert, end-mark));
 		}
 	}
 	
@@ -96,22 +92,21 @@ public class MarkHandler<T extends DatabaseType> implements ResponsibleHandler {
 		return null;
 	}
 
-	private boolean mark(DatabaseDocument<T> md, String stage, Mark mark) throws IOException {
+	private boolean mark(DatabaseDocument<T> databaseDocument, String stage, Mark mark) throws IOException {
 		logger.trace("handleMark(..., ..., " + mark.toString() + ")");
 
 		switch (mark) {
 		case PENDING: {
-			return io.markPending(md, stage);
-			
+			return io.markPending(databaseDocument, stage);
 		}
 		case PROCESSED: {
-			return io.markProcessed(md, stage);
+			return io.markProcessed(databaseDocument, stage);
 		}
 		case FAILED: {
-			return io.markFailed(md, stage);
+			return io.markFailed(databaseDocument, stage);
 		}
 		case DISCARDED: {
-			return io.markDiscarded(md, stage);
+			return io.markDiscarded(databaseDocument, stage);
 		}
 		}
 		return false;
