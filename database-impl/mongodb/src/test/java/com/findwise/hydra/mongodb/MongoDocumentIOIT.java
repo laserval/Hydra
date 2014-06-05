@@ -17,6 +17,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import com.findwise.hydra.DatabaseDocument;
+import com.findwise.hydra.DocumentReader;
 import org.apache.commons.io.IOUtils;
 import org.bson.types.ObjectId;
 import org.junit.Ignore;
@@ -350,5 +352,54 @@ public class MongoDocumentIOIT {
 		}
 
 		return new String(ca);
+	}
+
+	@Test
+	public void testMarkProcessedStoresModifications() {
+		MongoConnector mdc = mongoConnectorResource.getConnector();
+		DocumentWriter<MongoType> dw = mdc.getDocumentWriter();
+		dw.prepare();
+		DatabaseDocument<MongoType> document = new MongoDocument();
+		insertAndModifyDocument(dw, document);
+		dw.markProcessed(document, "processedDocTest");
+		assertDocumentModificationsArePresent(mdc.getDocumentReader(), document);
+	}
+
+	@Test
+	public void testMarkDiscardedStoresModifications() {
+		MongoConnector mdc = mongoConnectorResource.getConnector();
+		DocumentWriter<MongoType> dw = mdc.getDocumentWriter();
+		dw.prepare();
+		DatabaseDocument<MongoType> document = new MongoDocument();
+		insertAndModifyDocument(dw, document);
+		dw.markDiscarded(document, "discardedDocTest");
+		assertDocumentModificationsArePresent(mdc.getDocumentReader(), document);
+	}
+
+	@Test
+	public void testMarkFailedStoresModifications() {
+		MongoConnector mdc = mongoConnectorResource.getConnector();
+		DocumentWriter<MongoType> dw = mdc.getDocumentWriter();
+		dw.prepare();
+		DatabaseDocument<MongoType> document = new MongoDocument();
+		insertAndModifyDocument(dw, document);
+		dw.markFailed(document, "failedDocTest");
+		assertDocumentModificationsArePresent(mdc.getDocumentReader(), document);
+	}
+
+	private void insertAndModifyDocument(DocumentWriter<MongoType> dw, DatabaseDocument<MongoType> document) {
+		document.putContentField("field1", "value1");
+		document.putContentField("field2", "value2");
+		dw.insert(document);
+		document.putContentField("field1", "modifiedvalue");
+		document.putContentField("field3", "value3");
+	}
+
+	private void assertDocumentModificationsArePresent(DocumentReader<MongoType> dr, DatabaseDocument<MongoType> document) {
+		DatabaseDocument<MongoType> result = dr.getDocumentById(document.getID(), true);
+		for (String field : document.getContentFields()) {
+			assertTrue(result.hasContentField(field));
+			assertEquals(document.getContentField(field), result.getContentField(field));
+		}
 	}
 }

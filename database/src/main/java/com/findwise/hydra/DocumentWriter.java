@@ -65,7 +65,10 @@ public interface DocumentWriter<T extends DatabaseType> {
 	 * 
 	 * After this method is called on a given document, it should not show up in
 	 * normal get-operations performed by this interface.
-	 * 
+	 *
+	 * Implementations must ensure that the contents of the document are updated
+	 * along with the document state.
+	 *
 	 * @param d
 	 *            the document to mark as processed
 	 * @param stage
@@ -80,6 +83,9 @@ public interface DocumentWriter<T extends DatabaseType> {
 	 * 
 	 * After this method is called on a given document, it should not show up in
 	 * normal get-operations performed by this interface.
+	 *
+	 * Implementations must ensure that the contents of the document are updated
+	 * along with the document state.
 	 * 
 	 * @param d
 	 *            the document to discard
@@ -95,7 +101,10 @@ public interface DocumentWriter<T extends DatabaseType> {
 	 * 
 	 * After this method is called on a given document, it should not show up in
 	 * normal get-operations performed by this interface.
-	 * 
+	 *
+	 * Implementations must ensure that the contents of the document are updated
+	 * along with the document state.
+	 *
 	 * @param d
 	 *            the document to fail
 	 * @param stage

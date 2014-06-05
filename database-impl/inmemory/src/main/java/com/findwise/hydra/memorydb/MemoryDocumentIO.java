@@ -250,9 +250,10 @@ public class MemoryDocumentIO implements DocumentWriter<MemoryType>,
 			return false;
 		}
 		set.remove(temp);
-		((MemoryDocument) d).tag(flag, stage);
-		deleteAllFiles(d);
-		addInactive((MemoryDocument) d);
+		temp.putAll(d);
+		temp.tag(flag, stage);
+		deleteAllFiles(temp);
+		addInactive(temp);
 		return true;
 	}
 

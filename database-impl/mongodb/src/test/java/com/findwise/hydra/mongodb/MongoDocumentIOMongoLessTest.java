@@ -141,5 +141,4 @@ public class MongoDocumentIOMongoLessTest {
 		assertEquals("<Removed>", document.getContentField("long"));
 		assertTrue("Processing should return successfully.", processed);
 	}
-
 }

@@ -4,10 +4,12 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
+import com.findwise.hydra.DocumentReader;
 import org.apache.commons.io.IOUtils;
 import org.junit.Before;
 import org.junit.Test;
@@ -320,6 +322,14 @@ public class MemoryDocumentIOTest {
 			fail("No discarded flag on the document");
 		}
 	}
+
+	@Test
+	public void testDiscardDocument_stores_modifications() {
+		DatabaseDocument<MemoryType> document = io.getAndTag(new MemoryQuery(), "DiscardedTag").copy();
+		modifyDocument(document);
+		io.markDiscarded(document, "test_stage");
+		assertDocumentModificationsArePresent(io, document);
+	}
 	
 	@Test
 	public void testNullFields() {
@@ -366,6 +376,14 @@ public class MemoryDocumentIOTest {
 			fail("No failed flag on the document");
 		}
 	}
+
+	@Test
+	public void testFailedDocument_stores_modifications() {
+		DatabaseDocument<MemoryType> document = io.getAndTag(new MemoryQuery(), "failedTag").copy();
+		modifyDocument(document);
+		io.markFailed(document, "test_stage");
+		assertDocumentModificationsArePresent(io, document);
+	}
 	
 	@Test
 	public void testPendingDocument() {		
@@ -381,7 +399,7 @@ public class MemoryDocumentIOTest {
 	}
 	
 	@Test
-	public void testProcessedDocument() {		
+	public void testProcessedDocument() {
 		DatabaseDocument<MemoryType> processed = io.getAndTag(new MemoryQuery(), "processed");
 		
 		io.markProcessed(processed, "test_stage");
@@ -391,6 +409,14 @@ public class MemoryDocumentIOTest {
 		if(processed.getStatus()!=Status.PROCESSED) {
 			fail("No PROCESSED flag on the document");
 		}
+	}
+
+	@Test
+	public void testProcessedDocument_stores_modifications() {
+		DatabaseDocument<MemoryType> document = io.getAndTag(new MemoryQuery(), "processed").copy();
+		modifyDocument(document);
+		io.markProcessed(document, "test_stage");
+		assertDocumentModificationsArePresent(io, document);
 	}
 	
 	@Test
@@ -405,5 +431,18 @@ public class MemoryDocumentIOTest {
 			fail("Not the correct active database size after processed and discard, expected 0 found " + io.getActiveDatabaseSize());
 		}
 	}
-	
+
+	private void modifyDocument(DatabaseDocument<MemoryType> document) {
+		assertTrue(document.hasContentField("name"));
+		document.putContentField("name", "newname");
+		document.putContentField("field1", "value1");
+	}
+
+	private void assertDocumentModificationsArePresent(DocumentReader<MemoryType> dr, DatabaseDocument<MemoryType> document) {
+		DatabaseDocument<MemoryType> result = dr.getDocumentById(document.getID(), true);
+		for (String field : document.getContentFields()) {
+			assertTrue(result.hasContentField(field));
+			assertEquals(document.getContentField(field), result.getContentField(field));
+		}
+	}
 }
