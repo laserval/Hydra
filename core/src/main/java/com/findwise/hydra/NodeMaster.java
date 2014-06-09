@@ -25,6 +25,8 @@ public final class NodeMaster<T extends DatabaseType> extends Thread {
 	
 	private CoreConfiguration conf;
 	private ShutdownHandler shutdownHandler;
+
+	private boolean running = false;
 	
 	public NodeMaster(CoreConfiguration conf, CachingDocumentNIO<T> documentNIO, Pipeline pipeline, ShutdownHandler shutdownHandler) {
 		this.conf = conf;
@@ -36,6 +38,7 @@ public final class NodeMaster<T extends DatabaseType> extends Thread {
 		this.namespace = conf.getNamespace();
 		this.documentNIO = documentNIO;
 		this.dbc = documentNIO.getDatabaseConnector();
+		setName(String.format("%s-%d", this.getClass().getSimpleName(), port));
 	}
 	/**
 	 * Starts the NodeMaster.
@@ -48,12 +51,12 @@ public final class NodeMaster<T extends DatabaseType> extends Thread {
 			logger.error("Unable to establish connection to database.", e);
 			throw e;
 		}
-		
+		running = true;
 		super.start();
 	}
 
 	public void run() {
-		while (!isInterrupted()) {
+		while (!isInterrupted() && running) {
 			Pipeline newPipeline = dbc.getPipelineReader().getPipeline();
 			if(!pipeline.equals(newPipeline)) {
 				logger.info("Pipeline has been updated");
@@ -75,8 +78,22 @@ public final class NodeMaster<T extends DatabaseType> extends Thread {
 				interrupt();
 			}
 		}
+		stopAll();
 	}
-	
+
+	public void shutdown() {
+		logger.info("Got request to shut down NodeMaster");
+		running = false;
+	}
+
+	private void stopAll() {
+		for (StageRunner runner : sm.getRunners()) {
+			if (runner.isAlive()) {
+				runner.destroy();
+			}
+		}
+	}
+
 	private void startStopped() throws IOException {
 		for(StageRunner runner : sm.getRunners()) {
 			if(!runner.isAlive() && !runner.isStarted()) {
