@@ -26,10 +26,13 @@ public final class Main implements ShutdownHandler {
 	}
 
 	private static Logger logger = LoggerFactory.getLogger(Main.class);
-	private SimpleSocketServer simpleSocketServer = null;
+	private SimpleSocketServer loggingServer = null;
 	private RESTServer server = null;
+	private NodeMaster<MongoType> nodeMaster = null;
 
 	private volatile boolean shuttingDown = false;
+
+	private HydraKiller killer = new JvmHydraKiller();
 	
 	public static void main(String[] args) {
 		if (args.length > 1) {
@@ -49,8 +52,9 @@ public final class Main implements ShutdownHandler {
 	public void startup() {
 		ShuttingDownOnUncaughtException uncaughtExceptionHandler = new ShuttingDownOnUncaughtException(this);
 		Thread.setDefaultUncaughtExceptionHandler(uncaughtExceptionHandler);
-		simpleSocketServer = new SimpleSocketServer((LoggerContext) LoggerFactory.getILoggerFactory(), coreConfiguration.getLoggingPort());
-		simpleSocketServer.start();
+		loggingServer = new SimpleSocketServer((LoggerContext) LoggerFactory.getILoggerFactory(), coreConfiguration.getLoggingPort());
+		loggingServer.setName(String.format("%s-%d", loggingServer.getClass().getSimpleName(), coreConfiguration.getLoggingPort()));
+		loggingServer.start();
 
 		logger.info("Hydra Core creating connector, {}='{}', {}='{}'",
 				DatabaseConfiguration.DATABASE_URL_PARAM, coreConfiguration.getDatabaseUrl(),
@@ -77,7 +81,7 @@ public final class Main implements ShutdownHandler {
 				coreConfiguration.isCacheEnabled(),
 				coreConfiguration.getCacheTimeout());
 
-		NodeMaster<MongoType> nm = new NodeMaster<MongoType>(
+		nodeMaster = new NodeMaster<MongoType>(
 				coreConfiguration,
 				caching,
 				new Pipeline(), 
@@ -85,7 +89,7 @@ public final class Main implements ShutdownHandler {
 
 		server = new RESTServer(coreConfiguration,
 				new HttpRESTHandler<MongoType>(
-						nm.getDocumentIO(),
+						nodeMaster.getDocumentIO(),
 						backing.getPipelineReader(), 
 						null,
 						coreConfiguration.isPerformanceLogging()));
@@ -101,7 +105,7 @@ public final class Main implements ShutdownHandler {
 		}
 
 		try {
-			nm.blockingStart();
+			nodeMaster.blockingStart();
 		} catch (IOException e) {
 			logger.error("Unable to start nodemaster... Shutting down.");
 			shutdown();
@@ -113,16 +117,25 @@ public final class Main implements ShutdownHandler {
 		shuttingDown = true;
 		killUnlessShutdownWithin(KILL_DELAY);
 
-		if (simpleSocketServer != null) {
-			try {
-				simpleSocketServer.close();
-			} catch (Exception e) {
-				logger.debug("Caught exception while shutting down simpleSocketServer. Was it not started?", e);
-			}
+		logger.info("Shutting down NodeMaster");
+		if (nodeMaster != null) {
+			nodeMaster.shutdown();
 		} else {
-			logger.trace("simpleSocketServer was null");
+			logger.trace("NodeMaster was null");
 		}
 
+		logger.info("Closing logging server");
+		if (loggingServer != null) {
+			try {
+				loggingServer.close();
+			} catch (Exception e) {
+				logger.debug("Caught exception while shutting down loggingServer. Was it not started?", e);
+			}
+		} else {
+			logger.trace("loggingServer was null");
+		}
+
+		logger.info("Closing stage connection server");
 		if (server != null) {
 			try {
 				server.shutdown();
@@ -145,9 +158,7 @@ public final class Main implements ShutdownHandler {
 		if (killDelay < 0) {
 			return;
 		}
-		HydraKiller killerThread = new HydraKiller(killDelay);
-		killerThread.setDaemon(true);
-		killerThread.start();
+		killer.kill(killDelay);
 	}
 	
 	protected static CoreConfiguration getConfiguration(String fileName) {
@@ -161,6 +172,10 @@ public final class Main implements ShutdownHandler {
 			logger.error("Unable to read configuration", e);
 			return null;
 		}
+	}
+
+	public void setKiller(HydraKiller killer) {
+		this.killer = killer;
 	}
 
 	private class ShuttingDownOnUncaughtException implements UncaughtExceptionHandler {
@@ -183,26 +198,4 @@ public final class Main implements ShutdownHandler {
 		
 	}
 
-	private class HydraKiller extends Thread {
-
-		Logger logger = LoggerFactory.getLogger(HydraKiller.class);
-		private final long killDelay;
-
-		public HydraKiller(long killDelay) {
-			this.killDelay = killDelay;
-		}
-
-		@Override
-		public void run() {
-			try {
-				logger.debug("Hydra will be killed in " + killDelay + "ms unless it is shut down gracefully before then");
-				Thread.sleep(killDelay);
-				logger.info("Failed to shutdown hydra gracefully within configured shutdown timeout. Killing Hydra now");
-				System.exit(1);
-			} catch (Throwable e) {
-				logger.error("Caught exception in HydraKiller thread. Killing Hydra right away!", e);
-				System.exit(1);
-			}
-		}
-	}
 }

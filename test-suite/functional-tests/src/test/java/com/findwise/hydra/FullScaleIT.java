@@ -36,18 +36,27 @@ import static org.junit.Assert.assertThat;
 @RunWith(Parameterized.class)
 public class FullScaleIT {
 	private final boolean useOneStageGroupPerStage;
+	private final boolean cacheIsEnabled;
 	Logger logger = LoggerFactory.getLogger(FullScaleIT.class);
 
-	@Parameters(name = "useOneStageGroupPerStage={0}")
+	@Parameters(name = "useOneStageGroupPerStage={0},cacheIsEnabled={1}")
 	public static Iterable<Object[]> testParameters() {
 		// Not the most intuitive API here.
+		boolean cacheIsEnabled = true, useOneStageGroupPerStage = true;
+		boolean cacheIsDisabled = false, useOneStageGroupForAllStages = false;
 		return Arrays.asList(
-				new Object[][]{{true},{false}}
+				new Object[][]{
+						{useOneStageGroupPerStage, cacheIsEnabled},
+						{useOneStageGroupPerStage, cacheIsDisabled},
+						{useOneStageGroupForAllStages, cacheIsEnabled},
+						{useOneStageGroupForAllStages, cacheIsDisabled}
+				}
 		);
 	}
 
-	public FullScaleIT(boolean useOneStageGroupPerStage) {
+	public FullScaleIT(boolean useOneStageGroupPerStage, boolean cacheIsEnabled) {
 		this.useOneStageGroupPerStage = useOneStageGroupPerStage;
+		this.cacheIsEnabled = cacheIsEnabled;
 	}
 
 	MongoConfiguration mongoConfiguration;
@@ -68,7 +77,8 @@ public class FullScaleIT {
 		mongoConnector.connect();
 
 		// Initialize core, but don't start until test wants to.
-		CoreConfiguration coreConfiguration = new CoreMapConfiguration(mongoConfiguration, new MapConfiguration());
+		CoreMapConfiguration coreConfiguration = new CoreMapConfiguration(mongoConfiguration, new MapConfiguration());
+		coreConfiguration.setCaching(cacheIsEnabled);
 		core = new Main(coreConfiguration);
 	}
 
@@ -93,6 +103,7 @@ public class FullScaleIT {
 
 		// We start the core after we've inserted the stages and libraries so
 		// we don't have to wait for it to poll for updates.
+		core.setKiller(new NoopHydraKiller());
 		core.startup();
 
 		// Next, we add three documents with a field "externalDocId" to let us identify them
@@ -108,8 +119,10 @@ public class FullScaleIT {
 				logger.info("Found finished document " + finishedDocument);
 				// Assert that the document was successfully processed
 				assertThat(finishedDocument.getStatus(), equalTo(Document.Status.PROCESSED));
-				// Here we assert that we indeed have passed through the staticField stage
-				assertThat((String) finishedDocument.getContentField("testField"), equalTo("Set by SetStaticFieldStage"));
+				// Here we assert that we indeed have passed through the fieldSetter stage
+				assertThat((String) finishedDocument.getContentField("setField"), equalTo("Set by fieldSetter"));
+				// Assert that the fieldModifier changed the correct field
+				assertThat((String) finishedDocument.getContentField("modifiedField"), equalTo("Set by fieldModifier"));
 				finishedDocumentIds.add((String) finishedDocument.getContentField("externalDocId"));
 			} else {
 				// Wait for a little while before polling again.
@@ -135,10 +148,15 @@ public class FullScaleIT {
 	 * 	Creates a small linear pipeline
 	 */
 	private void createPrimitivePipeline() throws Exception {
-		Map<String, Object> fieldValueMap = new HashMap<String, Object>();
-		fieldValueMap.put("testField", "Set by SetStaticFieldStage");
-		HashMap<String, Object> staticStageParams = new HashMap<String, Object>();
-		staticStageParams.put("fieldValueMap", fieldValueMap);
+		Map<String, Object> fieldSetterFieldValueMap = new HashMap<String, Object>();
+		fieldSetterFieldValueMap.put("setField", "Set by fieldSetter");
+		fieldSetterFieldValueMap.put("modifiedField", "Set by fieldSetter");
+		HashMap<String, Object> fieldSetterParams = new HashMap<String, Object>();
+		fieldSetterParams.put("fieldValueMap", fieldSetterFieldValueMap);
+		Map<String, Object> fieldModifierFieldValueMap = new HashMap<String, Object>();
+		fieldModifierFieldValueMap.put("modifiedField", "Modified by fieldModifier");
+		HashMap<String, Object> fieldModifierParams = new HashMap<String, Object>();
+		fieldModifierParams.put("fieldValueMap", fieldModifierFieldValueMap);
 		new LinearPipelineBuilder().
 			addStages(
 				new StageBuilder()
@@ -147,10 +165,15 @@ public class FullScaleIT {
 					.libraryId("integration-test-stages-jar-with-dependencies.jar")
 					.build(),
 				new StageBuilder()
-					.stageName("staticFieldSetter")
+					.stageName("fieldSetter")
 					.className("com.findwise.hydra.stage.SetStaticFieldStage")
 					.libraryId("hydra-basic-stages-jar-with-dependencies.jar")
-					.stageProperties(staticStageParams).build(),
+					.stageProperties(fieldSetterParams).build(),
+				new StageBuilder()
+					.stageName("fieldModifier")
+					.className("com.findwise.hydra.stage.SetStaticFieldStage")
+					.libraryId("hydra-basic-stages-jar-with-dependencies.jar")
+					.stageProperties(fieldModifierParams).build(),
 				new StageBuilder()
 					.stageName("nullOutput")
 					.className("com.findwise.hydra.stage.NullOutputStage")
