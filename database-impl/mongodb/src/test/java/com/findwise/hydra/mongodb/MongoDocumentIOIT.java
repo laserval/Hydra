@@ -15,6 +15,7 @@ import java.io.ByteArrayInputStream;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 import com.findwise.hydra.DatabaseDocument;
@@ -384,6 +385,53 @@ public class MongoDocumentIOIT {
 		DatabaseDocument<MongoType> document = new MongoDocument();
 		insertAndModifyDocument(dw, document);
 		dw.markFailed(document, "failedDocTest");
+		assertDocumentModificationsArePresent(mdc.getDocumentReader(), document);
+	}
+
+	@SuppressWarnings("unchecked")
+	@Test
+	public void testMarkFailedStoresErrors() {
+		MongoConnector mdc = mongoConnectorResource.getConnector();
+		DocumentWriter<MongoType> dw = mdc.getDocumentWriter();
+		dw.prepare();
+		DatabaseDocument<MongoType> document = new MongoDocument();
+		dw.insert(document);
+		document.addError("failedDocTest", new Error());
+		dw.markFailed(document, "failedDocTest");
+		DatabaseDocument<MongoType> result = mdc.getDocumentReader().getDocumentById(document.getID(), true);
+		assertTrue(result.hasErrors());
+		assertTrue(result.hasMetadataField("failed"));
+		Map<String, Object> failedMap = (Map<String, Object>)result.getMetadataField("failed");
+		assertTrue(failedMap.containsKey("stage"));
+		assertEquals("failedDocTest", failedMap.get("stage"));
+	}
+
+	@Test
+	public void testUpdate() {
+		MongoConnector mdc = mongoConnectorResource.getConnector();
+		DocumentWriter<MongoType> dw = mdc.getDocumentWriter();
+		dw.prepare();
+		DatabaseDocument<MongoType> document = new MongoDocument();
+		insertAndModifyDocument(dw, document);
+		dw.update(document);
+		assertDocumentModificationsArePresent(mdc.getDocumentReader(), document);
+	}
+
+	@Test
+	public void testUpdateKeepsOldValues() {
+		MongoConnector mdc = mongoConnectorResource.getConnector();
+		DocumentWriter<MongoType> dw = mdc.getDocumentWriter();
+		dw.prepare();
+		DatabaseDocument<MongoType> document = new MongoDocument();
+		document.putContentField("field1", "value1");
+		document.putContentField("field2", "value2");
+		dw.insert(document);
+		MongoDocument mongoDocument = new MongoDocument();
+		mongoDocument.putContentField("field2", "modifiedvalue");
+		mongoDocument.putContentField("field3", "value3");
+		mongoDocument.setID(document.getID());
+		dw.update(mongoDocument);
+		document.putAll(mongoDocument);
 		assertDocumentModificationsArePresent(mdc.getDocumentReader(), document);
 	}
 

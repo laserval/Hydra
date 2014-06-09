@@ -100,7 +100,6 @@ public final class Main implements ShutdownHandler {
 			} else {
 				logger.error("Failed to start REST server");
 			}
-			
 			shutdown();
 		}
 
@@ -146,6 +145,12 @@ public final class Main implements ShutdownHandler {
 			}
 		} else {
 			logger.trace("server was null");
+		}
+
+		logger.info("Closing database connector");
+		if (nodeMaster != null) {
+			MongoConnector mongoConnector = (MongoConnector) nodeMaster.getDocumentIO().getDatabaseConnector();
+			mongoConnector.disconnect();
 		}
 	}
 

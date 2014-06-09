@@ -75,6 +75,7 @@ public class MongoConnector implements DatabaseConnector<MongoType> {
 	private MongoDocumentIO documentIO;
 
 	private boolean connected = false;
+	private MongoClient mongo;
 
 	public MongoConnector(DatabaseConfiguration conf) {
 		this.conf = conf;
@@ -98,10 +99,11 @@ public class MongoConnector implements DatabaseConnector<MongoType> {
 	}
 
 	protected void connect(MongoClient mongo, boolean startStatusUpdater) throws IOException {
-		db = mongo.getDB(conf.getNamespace());
+		this.mongo = mongo;
+		db = this.mongo.getDB(conf.getNamespace());
 
 		if (requiresAuthentication(mongo)) {
-			if (!mongo.getDB("admin").authenticate(conf.getDatabaseUser(),
+			if (!this.mongo.getDB("admin").authenticate(conf.getDatabaseUser(),
 					conf.getDatabasePassword().toCharArray())) {
 				throw new ConnectionException(new MongoException(
 						"Failed to authenticate to MongoDB with username="
@@ -151,6 +153,11 @@ public class MongoConnector implements DatabaseConnector<MongoType> {
 		if (startStatusUpdater) {
 			statusUpdater.start();
 		}
+	}
+
+	public void disconnect() {
+		mongo.close();
+		connected = false;
 	}
 
 	public StatusUpdater getStatusUpdater() {

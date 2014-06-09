@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.prefs.BackingStoreException;
 
+import com.mongodb.*;
 import org.bson.types.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,18 +26,6 @@ import com.findwise.hydra.DocumentWriter;
 import com.findwise.hydra.JsonException;
 import com.findwise.hydra.SerializationUtils;
 import com.findwise.hydra.StatusUpdater;
-import com.mongodb.BasicDBObject;
-import com.mongodb.BasicDBObjectBuilder;
-import com.mongodb.CommandResult;
-import com.mongodb.DB;
-import com.mongodb.DBCollection;
-import com.mongodb.DBCursor;
-import com.mongodb.DBObject;
-import com.mongodb.MongoException;
-import com.mongodb.MongoInternalException;
-import com.mongodb.QueryBuilder;
-import com.mongodb.WriteConcern;
-import com.mongodb.WriteResult;
 import com.mongodb.gridfs.GridFS;
 import com.mongodb.gridfs.GridFSDBFile;
 import com.mongodb.gridfs.GridFSInputFile;
@@ -347,7 +336,7 @@ public class MongoDocumentIO implements DocumentReader<MongoType>, DocumentWrite
 		mq.requireMetadataFieldNotEquals(Document.COMMITTING_METADATA_FLAG, true);
 
 		for(String t : tag) {
-			mq.requireMetadataFieldNotExists(DatabaseDocument.FETCHED_METADATA_TAG+"."+t);
+			mq.requireMetadataFieldNotExists(DatabaseDocument.FETCHED_METADATA_TAG + "." + t);
 		}
 		DBObject update = new BasicDBObject();
 		for(String t : tag) {
@@ -513,8 +502,14 @@ public class MongoDocumentIO implements DocumentReader<MongoType>, DocumentWrite
 		if(doc==null) {
 			return false;
 		}
-		
-		doc.putAll(((MongoDocument)d).toMap());
+
+		// Force use of the field-by-field copy putAll method
+		MongoDocument originalDoc = (MongoDocument)d;
+		MongoDocument storedDoc = new MongoDocument();
+		storedDoc.putAll(doc);
+		originalDoc.putAll((DatabaseDocument<MongoType>)storedDoc);
+
+		doc.putAll(originalDoc.toMap());
 		
 		stampMetadataField(doc, stamp, stage);
 		deleteAllFiles(d);

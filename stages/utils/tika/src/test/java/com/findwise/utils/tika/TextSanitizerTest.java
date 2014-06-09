@@ -4,6 +4,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,7 +20,6 @@ public class TextSanitizerTest {
     @Test
     public void testFilterString() throws Exception {
         String s = new String(new byte[] {-53});
-        System.out.println("char: "+s);
         Assert.assertEquals("", textSanitizer.filterInvalidChars(s));
 
         List<String> list = new ArrayList<String>();

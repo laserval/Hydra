@@ -5,6 +5,7 @@ import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -14,6 +15,7 @@ import com.mongodb.MongoClient;
 import com.mongodb.MongoClientURI;
 import com.mongodb.WriteConcern;
 import com.mongodb.gridfs.GridFS;
+import org.hamcrest.CoreMatchers;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -30,13 +32,19 @@ import com.findwise.hydra.mongodb.MongoDocumentIO;
 import com.findwise.hydra.mongodb.MongoQuery;
 import com.findwise.hydra.mongodb.MongoTailableIterator;
 
+import static org.hamcrest.CoreMatchers.hasItems;
+import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 @RunWith(Parameterized.class)
 public class FullScaleIT {
 	private final boolean useOneStageGroupPerStage;
 	private final boolean cacheIsEnabled;
+	private final String name;
 	Logger logger = LoggerFactory.getLogger(FullScaleIT.class);
 
 	@Parameters(name = "useOneStageGroupPerStage={0},cacheIsEnabled={1}")
@@ -57,6 +65,7 @@ public class FullScaleIT {
 	public FullScaleIT(boolean useOneStageGroupPerStage, boolean cacheIsEnabled) {
 		this.useOneStageGroupPerStage = useOneStageGroupPerStage;
 		this.cacheIsEnabled = cacheIsEnabled;
+		this.name = String.format("hydra-test-FullScaleIT-%s-%s", useOneStageGroupPerStage, cacheIsEnabled);
 	}
 
 	MongoConfiguration mongoConfiguration;
@@ -66,7 +75,7 @@ public class FullScaleIT {
 	@Before
 	public void setUp() throws Exception {
 		mongoConfiguration = new MongoConfiguration();
-		mongoConfiguration.setNamespace("hydra-test-FullScaleIT");
+		mongoConfiguration.setNamespace(name);
 		mongoConnector = new MongoConnector(mongoConfiguration);
 		mongoConnector.connect();
 
@@ -80,6 +89,7 @@ public class FullScaleIT {
 		CoreMapConfiguration coreConfiguration = new CoreMapConfiguration(mongoConfiguration, new MapConfiguration());
 		coreConfiguration.setCaching(cacheIsEnabled);
 		core = new Main(coreConfiguration);
+		core.setKiller(new NoopHydraKiller());
 	}
 
 	@After
@@ -91,6 +101,7 @@ public class FullScaleIT {
 	// A reasonable setting for this timeout is unfortunately very dependent on the
 	// performance of the machine running the test. Setting it very high to avoid
 	// random failures on TravisCI
+	@SuppressWarnings("unchecked")
 	@Test(timeout = 60000)
 	public void testAPrimitivePipelineWorks() throws Exception {
 		// Add libraries, using the filename as the library id. These jars should
@@ -103,7 +114,6 @@ public class FullScaleIT {
 
 		// We start the core after we've inserted the stages and libraries so
 		// we don't have to wait for it to poll for updates.
-		core.setKiller(new NoopHydraKiller());
 		core.startup();
 
 		// Next, we add three documents with a field "externalDocId" to let us identify them
@@ -121,8 +131,15 @@ public class FullScaleIT {
 				assertThat(finishedDocument.getStatus(), equalTo(Document.Status.PROCESSED));
 				// Here we assert that we indeed have passed through the fieldSetter stage
 				assertThat((String) finishedDocument.getContentField("setField"), equalTo("Set by fieldSetter"));
-				// Assert that the fieldModifier changed the correct field
-				assertThat((String) finishedDocument.getContentField("modifiedField"), equalTo("Set by fieldModifier"));
+				// Assert that the fieldModifier changed the correct fields
+				Object overwrittenField = finishedDocument.getContentField("overwrittenField");
+				assertThat(overwrittenField, is(instanceOf(String.class)));
+				assertTrue("overwrittenField should have a single value", overwrittenField instanceof String);
+				assertThat((String) finishedDocument.getContentField("overwrittenField"), equalTo("Overwritten by fieldOverwriter"));
+				Object modifiedField = finishedDocument.getContentField("modifiedField");
+				assertThat(modifiedField, is(instanceOf(List.class)));
+				assertTrue("modifiedField should have multiple values", modifiedField instanceof List);
+				assertThat((Iterable<String>) finishedDocument.getContentField("modifiedField"), hasItems("Set by fieldSetter", "Modified by fieldModifier"));
 				finishedDocumentIds.add((String) finishedDocument.getContentField("externalDocId"));
 			} else {
 				// Wait for a little while before polling again.
@@ -148,15 +165,29 @@ public class FullScaleIT {
 	 * 	Creates a small linear pipeline
 	 */
 	private void createPrimitivePipeline() throws Exception {
+		final String setField = "setField";
+		final String overwrittenField = "overwrittenField";
+		final String modifiedField = "modifiedField";
+		// fieldSetter
 		Map<String, Object> fieldSetterFieldValueMap = new HashMap<String, Object>();
-		fieldSetterFieldValueMap.put("setField", "Set by fieldSetter");
-		fieldSetterFieldValueMap.put("modifiedField", "Set by fieldSetter");
-		HashMap<String, Object> fieldSetterParams = new HashMap<String, Object>();
+		fieldSetterFieldValueMap.put(setField, "Set by fieldSetter");
+		fieldSetterFieldValueMap.put(overwrittenField, "Set by fieldSetter");
+		fieldSetterFieldValueMap.put(modifiedField, "Set by fieldSetter");
+		Map<String, Object> fieldSetterParams = new HashMap<String, Object>();
 		fieldSetterParams.put("fieldValueMap", fieldSetterFieldValueMap);
+		fieldSetterParams.put("overwritePolicy", "ADD");
+		// fieldModifier
 		Map<String, Object> fieldModifierFieldValueMap = new HashMap<String, Object>();
-		fieldModifierFieldValueMap.put("modifiedField", "Modified by fieldModifier");
-		HashMap<String, Object> fieldModifierParams = new HashMap<String, Object>();
+		fieldModifierFieldValueMap.put(modifiedField, "Modified by fieldModifier");
+		Map<String, Object> fieldModifierParams = new HashMap<String, Object>();
 		fieldModifierParams.put("fieldValueMap", fieldModifierFieldValueMap);
+		fieldModifierParams.put("overwritePolicy", "ADD");
+		// fieldOverwriter
+		Map<String, Object> fieldOverwriterFieldValueMap = new HashMap<String, Object>();
+		fieldOverwriterFieldValueMap.put(overwrittenField, "Overwritten by fieldOverwriter");
+		Map<String, Object> fieldOverwriterParams = new HashMap<String, Object>();
+		fieldOverwriterParams.put("fieldValueMap", fieldOverwriterFieldValueMap);
+		fieldOverwriterParams.put("overwritePolicy", "OVERWRITE");
 		new LinearPipelineBuilder().
 			addStages(
 				new StageBuilder()
@@ -171,6 +202,11 @@ public class FullScaleIT {
 					.stageProperties(fieldSetterParams).build(),
 				new StageBuilder()
 					.stageName("fieldModifier")
+					.className("com.findwise.hydra.stage.SetStaticFieldStage")
+					.libraryId("hydra-basic-stages-jar-with-dependencies.jar")
+					.stageProperties(fieldOverwriterParams).build(),
+				new StageBuilder()
+					.stageName("fieldOverwriter")
 					.className("com.findwise.hydra.stage.SetStaticFieldStage")
 					.libraryId("hydra-basic-stages-jar-with-dependencies.jar")
 					.stageProperties(fieldModifierParams).build(),
