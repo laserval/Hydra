@@ -53,6 +53,7 @@ public class MongoDocumentIO implements DocumentReader<MongoType>, DocumentWrite
 	public static final String DOCUMENT_COLLECTION = "documents";
 	public static final String OLD_DOCUMENT_COLLECTION ="oldDocuments";
 	public static final String DOCUMENT_FS = "documents";
+	private static final String DOCUMENT_FS_FILES_COLLECTION = DOCUMENT_FS + ".files";
 
 	public static final int DEFAULT_RECURRING_INTERVAL = 2000;
 	private static final int BYTES_IN_MB = 1048576;
@@ -86,6 +87,7 @@ public class MongoDocumentIO implements DocumentReader<MongoType>, DocumentWrite
 		capIfNew(documents.getDB(), oldDocsSize, maxDocumentsToKeep);
 		oldDocuments = documents.getDB().getCollection(OLD_DOCUMENT_COLLECTION);
 		oldDocuments.setObjectClass(MongoDocument.class);
+		documentfs.getDB().getCollection(DOCUMENT_FS_FILES_COLLECTION).ensureIndex(DOCUMENT_KEY);
 	}
 	
 	private void capIfNew(DB db, long size, long max) {
