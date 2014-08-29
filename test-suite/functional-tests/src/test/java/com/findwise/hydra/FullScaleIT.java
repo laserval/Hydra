@@ -1,7 +1,13 @@
 package com.findwise.hydra;
 
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.UnknownHostException;
+import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -10,11 +16,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import com.findwise.hydra.mongodb.MongoType;
 import com.mongodb.DB;
 import com.mongodb.MongoClient;
 import com.mongodb.MongoClientURI;
 import com.mongodb.WriteConcern;
 import com.mongodb.gridfs.GridFS;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.hamcrest.CoreMatchers;
 import org.junit.After;
 import org.junit.Before;
@@ -50,8 +59,8 @@ public class FullScaleIT {
 	@Parameters(name = "useOneStageGroupPerStage={0},cacheIsEnabled={1}")
 	public static Iterable<Object[]> testParameters() {
 		// Not the most intuitive API here.
-		boolean cacheIsEnabled = true, useOneStageGroupPerStage = true;
-		boolean cacheIsDisabled = false, useOneStageGroupForAllStages = false;
+		final boolean cacheIsEnabled = true, useOneStageGroupPerStage = true;
+		final boolean cacheIsDisabled = false, useOneStageGroupForAllStages = false;
 		return Arrays.asList(
 				new Object[][]{
 						{useOneStageGroupPerStage, cacheIsEnabled},
@@ -116,10 +125,10 @@ public class FullScaleIT {
 		// we don't have to wait for it to poll for updates.
 		core.startup();
 
-		// Next, we add three documents with a field "externalDocId" to let us identify them
+		// Next, we add documents with a field "externalDocId" to let us identify them
 		Set<String> externalDocumentIds = createDocuments(3);
 
-		// Now we just have to wait for all three documents to end up in the "oldDocuments" repository
+		// Now we just have to wait for all documents to end up in the "oldDocuments" repository
 		MongoTailableIterator inactiveIterator = mongoConnector.getDocumentReader().getInactiveIterator(new MongoQuery());
 
 		Set<String> finishedDocumentIds = new HashSet<String>();
@@ -140,6 +149,10 @@ public class FullScaleIT {
 				assertThat(modifiedField, is(instanceOf(List.class)));
 				assertTrue("modifiedField should have multiple values", modifiedField instanceof List);
 				assertThat((Iterable<String>) finishedDocument.getContentField("modifiedField"), hasItems("Set by fieldSetter", "Modified by fieldModifier"));
+				Object attachmentContentsField = finishedDocument.getContentField("attachmentContents");
+				assertThat(attachmentContentsField, is(instanceOf(List.class)));
+				assertTrue("modifiedField should have multiple values", attachmentContentsField instanceof List);
+				assertThat((Iterable<String>) attachmentContentsField, hasItems("attachment 1 contents", "attachment 2 contents"));
 				finishedDocumentIds.add((String) finishedDocument.getContentField("externalDocId"));
 			} else {
 				// Wait for a little while before polling again.
@@ -148,17 +161,28 @@ public class FullScaleIT {
 		}
 	}
 
-	private Set<String> createDocuments(int numDocs) throws UnknownHostException {
+	private Set<String> createDocuments(int numDocs) throws IOException {
 		MongoDocumentIO mongoDocumentIO = buildMongoDocumentIO(mongoConfiguration);
 		Set<String> externalDocumentIds = new HashSet<String>();
 		for(int i = 0; i < numDocs; i++) {
 			String externalDocId = UUID.randomUUID().toString();
-			MongoDocument mongoDocument = new MongoDocument();
-			mongoDocument.putContentField("externalDocId", externalDocId);
-			mongoDocumentIO.insert(mongoDocument);
+			addDocument(externalDocId, mongoDocumentIO);
 			externalDocumentIds.add(externalDocId);
 		}
 		return externalDocumentIds;
+	}
+
+	private void addDocument(String externalDocId, MongoDocumentIO mongoDocumentIO) throws IOException {
+		MongoDocument mongoDocument = new MongoDocument();
+		mongoDocument.putContentField("externalDocId", externalDocId);
+		InputStream attachment1InputStream = new ByteArrayInputStream(
+				"attachment 1 contents".getBytes(Charset.forName("UTF-8")));
+		InputStream attachment2InputStream = new ByteArrayInputStream(
+				"attachment 2 contents".getBytes(Charset.forName("UTF-8")));
+		List<DocumentFile<MongoType>> attachments = new ArrayList<DocumentFile<MongoType>>();
+		attachments.add(new DocumentFile<MongoType>(null, "attachment1-test-file.txt", attachment1InputStream));
+		attachments.add(new DocumentFile<MongoType>(null, "attachment2-test-file.txt", attachment2InputStream));
+		mongoDocumentIO.insert(mongoDocument, attachments);
 	}
 
 	/**
@@ -211,6 +235,11 @@ public class FullScaleIT {
 					.libraryId("hydra-basic-stages-jar-with-dependencies.jar")
 					.stageProperties(fieldModifierParams).build(),
 				new StageBuilder()
+					.stageName("attachmentReader")
+					.className("com.findwise.hydra.stage.AttachmentReaderStage")
+					.libraryId("integration-test-stages-jar-with-dependencies.jar")
+					.build(),
+				new StageBuilder()
 					.stageName("nullOutput")
 					.className("com.findwise.hydra.stage.NullOutputStage")
 					.libraryId("integration-test-stages-jar-with-dependencies.jar").build()
@@ -228,7 +257,7 @@ public class FullScaleIT {
 		long documentsToKeep = mongoConfiguration.getOldMaxCount();
 		int oldDocsMaxSizeMB = mongoConfiguration.getOldMaxSize();
 		StatusUpdater updater = new StatusUpdater(new MongoConnector(mongoConfiguration));
-		GridFS documentFs = new GridFS(db);
+		GridFS documentFs = new GridFS(db, MongoDocumentIO.DOCUMENT_FS);
 
 		MongoDocumentIO io = new MongoDocumentIO(db, concern, documentsToKeep,
 			oldDocsMaxSizeMB, updater, documentFs);
